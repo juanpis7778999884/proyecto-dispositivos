@@ -1,3 +1,4 @@
+import { google } from '@ai-sdk/google'
 import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { NextResponse } from 'next/server'
@@ -148,7 +149,7 @@ Incluye: estado general, alertas importantes, y una recomendacion.`
 
   try {
     const result = await generateText({
-      model: 'anthropic/claude-sonnet-4-20250514',
+      model: google('gemini-2.0-flash'),
       system:
         'Eres un experto en cuidado de plantas. Genera resumenes claros y utiles en espanol.',
       prompt,
