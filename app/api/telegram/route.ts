@@ -4,40 +4,70 @@ import { generateText } from 'ai'
 import { NextResponse } from 'next/server'
 import type { TelegramUpdate, PlantEvent } from '@/lib/types'
 
-// Telegram webhook endpoint - receives messages from users
 export async function POST(req: Request) {
   try {
     const update: TelegramUpdate = await req.json()
 
-    // Only process text messages
     if (!update.message?.text) {
       return NextResponse.json({ ok: true })
     }
 
     const chatId = update.message.chat.id
-    const userMessage = update.message.text
+    const userMessage = update.message.text.toLowerCase().trim()
     const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN
 
     if (!telegramBotToken) {
-      console.error('[v0] TELEGRAM_BOT_TOKEN not configured')
       return NextResponse.json({ ok: true })
     }
 
-    // Get recent plant events for context
     const supabase = await createClient()
+
+    // ============== COMANDOS DIRECTOS ==============
+    if (userMessage === 'regar' || userMessage === 'riego') {
+      await supabase
+        .from('estados_sistema')
+        .update({ riego_activo: true })
+        .eq('id', 1)
+
+      await sendTelegramMessage(telegramBotToken, chatId.toString(),
+        '💧 Riego activado. El ESP32 comenzará a regar en los próximos segundos.')
+      return NextResponse.json({ ok: true })
+    }
+
+    if (userMessage === 'parar' || userMessage === 'detener' || userMessage === 'stop') {
+      await supabase
+        .from('estados_sistema')
+        .update({ riego_activo: false })
+        .eq('id', 1)
+
+      await sendTelegramMessage(telegramBotToken, chatId.toString(),
+        '⏹️ Riego detenido.')
+      return NextResponse.json({ ok: true })
+    }
+
+    if (userMessage === 'estado' || userMessage === 'status') {
+      const { data: estado } = await supabase
+        .from('estados_sistema')
+        .select('*')
+        .eq('id', 1)
+        .single()
+
+      const msg = `🌱 Estado actual:
+- Temperatura: ${estado?.ultima_temperatura || 'desconocida'}
+- Riego activo: ${estado?.riego_activo ? 'Sí 💧' : 'No'}`
+
+      await sendTelegramMessage(telegramBotToken, chatId.toString(), msg)
+      return NextResponse.json({ ok: true })
+    }
+
+    // ============== RESPUESTA CON IA ==============
     const { data: events } = await supabase
       .from('plant_events')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(20)
 
-    // Generate AI response with plant context
-    const response = await generatePlantResponse(
-      userMessage,
-      events as PlantEvent[]
-    )
-
-    // Send response to user
+    const response = await generatePlantResponse(userMessage, events as PlantEvent[])
     await sendTelegramMessage(telegramBotToken, chatId.toString(), response)
 
     return NextResponse.json({ ok: true })
@@ -52,23 +82,12 @@ async function generatePlantResponse(
   events: PlantEvent[] | null
 ): Promise<string> {
   const eventsContext = events
-    ? events
-        .map(
-          (e) =>
-            `[${new Date(e.created_at).toLocaleString('es-ES')}] ${e.message}`
-        )
-        .join('\n')
+    ? events.map((e) => `[${new Date(e.created_at).toLocaleString('es-ES')}] ${e.message}`).join('\n')
     : 'No hay eventos recientes.'
 
-  // Calculate plant status
   const lastTempEvent = events?.find((e) => e.event_type === 'temperature')
-  const heatAlerts =
-    events?.filter(
-      (e) =>
-        e.temperature_zone === 'calor' || e.temperature_zone === 'calor_extremo'
-    ).length || 0
-  const coldAlerts =
-    events?.filter((e) => e.temperature_zone === 'frio').length || 0
+  const heatAlerts = events?.filter((e) => e.temperature_zone === 'calor' || e.temperature_zone === 'calor_extremo').length || 0
+  const coldAlerts = events?.filter((e) => e.temperature_zone === 'frio').length || 0
   const lastWatering = events?.find((e) => e.event_type === 'watering')
 
   const statusSummary = `
@@ -77,6 +96,8 @@ Estado actual:
 - Alertas de calor recientes: ${heatAlerts}
 - Alertas de frio recientes: ${coldAlerts}
 - Ultimo riego: ${lastWatering ? new Date(lastWatering.created_at).toLocaleString('es-ES') : 'sin registro'}
+
+Comandos disponibles: "regar", "parar", "estado"
 `
 
   try {
@@ -98,15 +119,11 @@ ${eventsContext}`,
     return result.text
   } catch (error) {
     console.error('[v0] AI generation error:', error)
-    return 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+    return 'Lo siento, hubo un error. Intenta de nuevo.'
   }
 }
 
-async function sendTelegramMessage(
-  token: string,
-  chatId: string,
-  text: string
-) {
+async function sendTelegramMessage(token: string, chatId: string, text: string) {
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
