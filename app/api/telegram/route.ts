@@ -30,11 +30,13 @@ export async function POST(req: Request) {
         .eq('id', 1)
 
       await supabase
-        .from('historial_riego')
+        .from('plant_events')
         .insert({
-          evento: 'watering_started',
-          zona: 'normal',
-          mensaje: 'ESP32: Riego activado remotamente desde Telegram'
+          event_type: 'watering',
+          event_subtype: 'started',
+          temperature_zone: 'normal',
+          message: 'Riego activado remotamente desde Telegram',
+          raw_data: { event: 'watering_started', source: 'telegram' }
         })
 
       await sendTelegramMessage(telegramBotToken, chatId.toString(),
@@ -49,11 +51,13 @@ export async function POST(req: Request) {
         .eq('id', 1)
 
       await supabase
-        .from('historial_riego')
+        .from('plant_events')
         .insert({
-          evento: 'watering_stopped',
-          zona: 'normal',
-          mensaje: 'ESP32: Riego detenido remotamente desde Telegram'
+          event_type: 'watering',
+          event_subtype: 'completed',
+          temperature_zone: 'normal',
+          message: 'Riego detenido remotamente desde Telegram',
+          raw_data: { event: 'watering_stopped', source: 'telegram' }
         })
 
       await sendTelegramMessage(telegramBotToken, chatId.toString(),
