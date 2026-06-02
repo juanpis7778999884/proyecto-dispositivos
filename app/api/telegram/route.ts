@@ -29,6 +29,14 @@ export async function POST(req: Request) {
         .update({ riego_activo: true })
         .eq('id', 1)
 
+      await supabase
+        .from('historial_riego')
+        .insert({
+          evento: 'watering_started',
+          zona: 'normal',
+          mensaje: 'ESP32: Riego activado remotamente desde Telegram'
+        })
+
       await sendTelegramMessage(telegramBotToken, chatId.toString(),
         '💧 Riego activado. El ESP32 comenzará a regar en los próximos segundos.')
       return NextResponse.json({ ok: true })
@@ -39,6 +47,14 @@ export async function POST(req: Request) {
         .from('estados_sistema')
         .update({ riego_activo: false })
         .eq('id', 1)
+
+      await supabase
+        .from('historial_riego')
+        .insert({
+          evento: 'watering_stopped',
+          zona: 'normal',
+          mensaje: 'ESP32: Riego detenido remotamente desde Telegram'
+        })
 
       await sendTelegramMessage(telegramBotToken, chatId.toString(),
         '⏹️ Riego detenido.')
