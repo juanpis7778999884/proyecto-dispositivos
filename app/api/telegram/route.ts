@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google'
+import { groq } from '@ai-sdk/groq'
 import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { NextResponse } from 'next/server'
@@ -81,7 +81,7 @@ Estado actual:
 
   try {
     const result = await generateText({
-      model: google('gemini-2.0-flash'),
+      model: groq('llama-3.3-70b-versatile'),
       system: `Eres PlantBot, un asistente experto en cuidado de plantas. 
 Tienes acceso al historial de eventos de un sistema de monitoreo de plantas con ESP32.
 Responde en espanol de forma concisa y util.

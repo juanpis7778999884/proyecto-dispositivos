@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google'
+import { groq } from '@ai-sdk/groq'
 import { createClient } from '@/lib/supabase/server'
 import {
   consumeStream,
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   // NOTA: Asegúrate de tener la API Key correspondiente en tus variables de entorno de Vercel
   // Si usas Anthropic necesitas ANTHROPIC_API_KEY. Si prefieres cambiar a OpenAI, cambias el provider.
   const result = streamText({
-   model: google('gemini-2.0-flash'),
+   model: groq('llama-3.3-70b-versatile'),
     system: `Eres PlantBot, un asistente experto en cuidado de plantas conectado a un sistema de monitoreo con ESP32 en Santander, Colombia.
 Tienes acceso a datos en tiempo real de la planta a través de Supabase. Responde de manera amigable, concisa y en español.
 

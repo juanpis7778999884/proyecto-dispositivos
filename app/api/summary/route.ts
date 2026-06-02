@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google'
+import { groq } from '@ai-sdk/groq'
 import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { NextResponse } from 'next/server'
@@ -149,7 +149,7 @@ Incluye: estado general, alertas importantes, y una recomendacion.`
 
   try {
     const result = await generateText({
-      model: google('gemini-2.0-flash'),
+      model: groq('llama-3.3-70b-versatile'),
       system:
         'Eres un experto en cuidado de plantas. Genera resumenes claros y utiles en espanol.',
       prompt,
