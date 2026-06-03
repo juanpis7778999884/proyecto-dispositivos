@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     const chatId = update.message.chat.id
     const userMessage = update.message.text.toLowerCase().trim()
     const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN
+    const googleScriptUrl = process.env.GOOGLE_SCRIPT_URL
 
     if (!telegramBotToken) {
       return NextResponse.json({ ok: true })
@@ -39,6 +40,21 @@ export async function POST(req: Request) {
           raw_data: { event: 'watering_started', source: 'telegram' }
         })
 
+      if (googleScriptUrl) {
+        await fetch(googleScriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            timestamp: new Date().toISOString(),
+            event_type: 'watering',
+            event_subtype: 'started',
+            temperature_zone: 'normal',
+            message: 'Riego activado remotamente desde Telegram',
+            raw_data: JSON.stringify({ source: 'telegram' })
+          })
+        })
+      }
+
       await sendTelegramMessage(telegramBotToken, chatId.toString(),
         '💧 Riego activado. El ESP32 comenzará a regar en los próximos segundos.')
       return NextResponse.json({ ok: true })
@@ -59,6 +75,21 @@ export async function POST(req: Request) {
           message: 'Riego detenido remotamente desde Telegram',
           raw_data: { event: 'watering_stopped', source: 'telegram' }
         })
+
+      if (googleScriptUrl) {
+        await fetch(googleScriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            timestamp: new Date().toISOString(),
+            event_type: 'watering',
+            event_subtype: 'completed',
+            temperature_zone: 'normal',
+            message: 'Riego detenido remotamente desde Telegram',
+            raw_data: JSON.stringify({ source: 'telegram' })
+          })
+        })
+      }
 
       await sendTelegramMessage(telegramBotToken, chatId.toString(),
         '⏹️ Riego detenido.')
